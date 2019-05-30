@@ -1,4 +1,4 @@
-module github.com/moul/http2curl
+module github.com/dkoston/http2curl
 
 go 1.12
 

@@ -10,19 +10,30 @@ import (
 	"strings"
 )
 
-// CurlCommand contains exec.Command compatible slice + helpers
+// CurlCommand contains exec.Command compatible command and args
 type CurlCommand struct {
-	slice []string
+	command string
+	args []string
 }
 
-// append appends a string to the CurlCommand
+// append appends a string to arguments of the CurlCommand
 func (c *CurlCommand) append(newSlice ...string) {
-	c.slice = append(c.slice, newSlice...)
+	c.args = append(c.args, newSlice...)
+}
+
+// Args returns the arguments for the curl command as a slice
+func (c *CurlCommand) Args() []string {
+	return c.args
+}
+
+// Args returns the command (program) name as a string
+func (c *CurlCommand) Command() string {
+	return c.command
 }
 
 // String returns a ready to copy/paste command
 func (c *CurlCommand) String() string {
-	return strings.Join(c.slice, " ")
+	return c.command + " " + strings.Join(c.args, " ")
 }
 
 // nopCloser is used to create a new io.ReadCloser for req.Body
@@ -38,11 +49,11 @@ func (nopCloser) Close() error { return nil }
 
 // GetCurlCommand returns a CurlCommand corresponding to an http.Request
 func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
-	command := CurlCommand{}
+	c := CurlCommand{}
+	c.command = "curl"
 
-	command.append("curl")
 
-	command.append("-X", bashEscape(req.Method))
+	c.append("-X", bashEscape(req.Method))
 
 	if req.Body != nil {
 		body, err := ioutil.ReadAll(req.Body)
@@ -51,7 +62,7 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 		}
 		req.Body = nopCloser{bytes.NewBuffer(body)}
 		bodyEscaped := bashEscape(string(body))
-		command.append("-d", bodyEscaped)
+		c.append("-d", bodyEscaped)
 	}
 
 	var keys []string
@@ -62,10 +73,10 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		command.append("-H", bashEscape(fmt.Sprintf("%s: %s", k, strings.Join(req.Header[k], " "))))
+		c.append("-H", bashEscape(fmt.Sprintf("%s: %s", k, strings.Join(req.Header[k], " "))))
 	}
 
-	command.append(bashEscape(req.URL.String()))
+	c.append(bashEscape(req.URL.String()))
 
-	return &command, nil
+	return &c, nil
 }

@@ -3,6 +3,7 @@ package http2curl
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-test/deep"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -98,4 +99,45 @@ func TestGetCurlCommand(t *testing.T) {
 		expected := `curl -X 'PUT' -d '{"hello":"world","answer":42}' -H 'Content-Type: application/json' -H 'X-Auth-Token: private-token' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'`
 		So(command.String(), ShouldEqual, expected)
 	})
+}
+
+func TestCurlCommand_CommandSlice(t *testing.T) {
+	headers := make(map[string]string,0)
+	headers["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0) Gecko/20100101 Firefox/67.0"
+
+	data := []byte("type=new&param=1&param2=banana")
+
+	host := "https://somedomain.tldthatdoesnotexist"
+
+	method := "POST"
+
+	req, err := http.NewRequest(method, host, bytes.NewBuffer(data))
+	if err != nil {
+		t.Error(err)
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	expectedCommand := "curl"
+	expectedArgs := []string{"-X", "'POST'", "-d","'type=new&param=1&param2=banana'","-H","'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0) Gecko/20100101 Firefox/67.0'", "'https://somedomain.tldthatdoesnotexist'"}
+
+	command, err := GetCurlCommand(req)
+	if err != nil {
+		t.Error(err)
+	}
+
+	cmd := command.Command()
+
+	if cmd != expectedCommand {
+		t.Errorf("Got unexpected command name. Expected: %s. Got: %s", expectedCommand, cmd)
+	}
+
+	args := command.Args()
+
+
+	if diff := deep.Equal(args, expectedArgs); diff != nil {
+		t.Errorf("Got unexpected command args. Diff: %v", diff)
+	}
 }
