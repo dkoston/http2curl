@@ -41,8 +41,18 @@ type nopCloser struct {
 	io.Reader
 }
 
-func bashEscape(str string) string {
+// singleQuoteEscape sets single quoted strings and escapes single quotes
+func singleQuoteEscape(str string) string {
 	return `'` + strings.Replace(str, `'`, `'\''`, -1) + `'`
+}
+
+// escapeURL puts single quotes around URLs with query params and escapes single quotes
+// URLs without query params are not quoted
+func escapeURL(url string) string {
+	if strings.ContainsAny(url, "?&'") {
+		return singleQuoteEscape(url)
+	}
+	return url
 }
 
 func (nopCloser) Close() error { return nil }
@@ -52,8 +62,7 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 	c := CurlCommand{}
 	c.command = "curl"
 
-
-	c.append("-X", bashEscape(req.Method))
+	c.append("-X", req.Method)
 
 	if req.Body != nil {
 		body, err := ioutil.ReadAll(req.Body)
@@ -61,7 +70,7 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 			return nil, err
 		}
 		req.Body = nopCloser{bytes.NewBuffer(body)}
-		bodyEscaped := bashEscape(string(body))
+		bodyEscaped := singleQuoteEscape(string(body))
 		c.append("-d", bodyEscaped)
 	}
 
@@ -73,10 +82,10 @@ func GetCurlCommand(req *http.Request) (*CurlCommand, error) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		c.append("-H", bashEscape(fmt.Sprintf("%s: %s", k, strings.Join(req.Header[k], " "))))
+		c.append("-H", singleQuoteEscape(fmt.Sprintf("%s: %s", k, strings.Join(req.Header[k], " "))))
 	}
 
-	c.append(bashEscape(req.URL.String()))
+	c.append(escapeURL(req.URL.String()))
 
 	return &c, nil
 }

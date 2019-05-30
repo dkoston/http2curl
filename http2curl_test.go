@@ -25,7 +25,7 @@ func ExampleGetCurlCommand() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'POST' -d 'age=10&name=Hudson' -H 'Api_key: 123' 'http://foo.com/cats'
+	// curl -X POST -d 'age=10&name=Hudson' -H 'Api_key: 123' http://foo.com/cats
 }
 
 func ExampleGetCurlCommand_json() {
@@ -36,7 +36,7 @@ func ExampleGetCurlCommand_json() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'PUT' -d '{"hello":"world","answer":42}' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
+	// curl -X PUT -d '{"hello":"world","answer":42}' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
 }
 
 func ExampleGetCurlCommand_noBody() {
@@ -47,7 +47,7 @@ func ExampleGetCurlCommand_noBody() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'PUT' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
+	// curl -X PUT -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
 }
 
 func ExampleGetCurlCommand_emptyStringBody() {
@@ -58,7 +58,7 @@ func ExampleGetCurlCommand_emptyStringBody() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'PUT' -d '' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
+	// curl -X PUT -d '' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
 }
 
 func ExampleGetCurlCommand_newlineInBody() {
@@ -69,7 +69,7 @@ func ExampleGetCurlCommand_newlineInBody() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'POST' -d 'hello
+	// curl -X POST -d 'hello
 	// world' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
 }
 
@@ -81,7 +81,7 @@ func ExampleGetCurlCommand_specialCharsInBody() {
 	fmt.Println(command)
 
 	// Output:
-	// curl -X 'POST' -d 'Hello $123 o'\''neill -"-' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
+	// curl -X POST -d 'Hello $123 o'\''neill -"-' -H 'Content-Type: application/json' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'
 }
 
 func TestGetCurlCommand(t *testing.T) {
@@ -96,7 +96,7 @@ func TestGetCurlCommand(t *testing.T) {
 
 		command, err := GetCurlCommand(req)
 		So(err, ShouldBeNil)
-		expected := `curl -X 'PUT' -d '{"hello":"world","answer":42}' -H 'Content-Type: application/json' -H 'X-Auth-Token: private-token' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'`
+		expected := `curl -X PUT -d '{"hello":"world","answer":42}' -H 'Content-Type: application/json' -H 'X-Auth-Token: private-token' 'http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu'`
 		So(command.String(), ShouldEqual, expected)
 	})
 }
@@ -121,7 +121,7 @@ func TestCurlCommand_CommandSlice(t *testing.T) {
 	}
 
 	expectedCommand := "curl"
-	expectedArgs := []string{"-X", "'POST'", "-d","'type=new&param=1&param2=banana'","-H","'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0) Gecko/20100101 Firefox/67.0'", "'https://somedomain.tldthatdoesnotexist'"}
+	expectedArgs := []string{"-X", "POST", "-d","'type=new&param=1&param2=banana'","-H","'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0) Gecko/20100101 Firefox/67.0'", "https://somedomain.tldthatdoesnotexist"}
 
 	command, err := GetCurlCommand(req)
 	if err != nil {
@@ -139,5 +139,33 @@ func TestCurlCommand_CommandSlice(t *testing.T) {
 
 	if diff := deep.Equal(args, expectedArgs); diff != nil {
 		t.Errorf("Got unexpected command args. Diff: %v", diff)
+	}
+}
+
+func TestCurlCommand_escapeURL(t *testing.T) {
+	type testCase struct {
+		url     string
+		escaped string
+	}
+	testCases := []testCase{
+		{
+			"http://www.domain.com",
+			"http://www.domain.com",
+		},
+		{
+			"https://www.domain.com/this?that",
+			"'https://www.domain.com/this?that'",
+		},
+		{
+			"https://www.domain.com/this?there's",
+			"'https://www.domain.com/this?there'\\''s'",
+		},
+	}
+
+	for i := 0; i < len(testCases); i++ {
+		result := escapeURL(testCases[i].url)
+		if result != testCases[i].escaped {
+			t.Errorf("Expected: %s. Got %s. Test case %d", testCases[i].escaped, result, i)
+		}
 	}
 }

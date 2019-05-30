@@ -15,72 +15,25 @@ To do the reverse, check out [mholt/curl-to-go](https://github.com/mholt/curl-to
 
 ### Printing the curl command
 
-```go
-package main
-import (
-	"bytes"
-	"fmt"
-	"github.com/dkoston/http2curl"
-	"log"
-	"net/http"
-)
+For code see: [./examples/printcurl/main.go](./examples/printcurl/main.go)
 
-func main() {
-    data := bytes.NewBufferString(`{"hello":"world","answer":42}`)
-    req, _ := http.NewRequest("PUT", "http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu", data)
-    req.Header.Set("Content-Type", "application/json")
-    
-    command, err := http2curl.GetCurlCommand(req)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Println(command)
-    // Output: curl -X PUT -d "{\"hello\":\"world\",\"answer\":42}" -H "Content-Type: application/json" http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu
-}
+To run:
+
+```bash
+go run examples/printcurl/main.go
 ```
 
 ### exec.Command() execution of curl command
 
-```go
-package main
-import (
-	"bytes"
-	"fmt"
-    "github.com/dkoston/http2curl"
-	"log"
-	"net/http"
-	"os"
-	"os/exec"
-)
+For code see: [./examples/execcommand/main.go](./examples/execcommand/main.go)
 
-func main() {
-    data := bytes.NewBufferString(`{"hello":"world","answer":42}`)
-    req, _ := http.NewRequest("PUT", "http://www.example.com/abc/def.ghi?jlk=mno&pqr=stu", data)
-    req.Header.Set("Content-Type", "application/json")
-    
-    command, err := http2curl.GetCurlCommand(req)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    commandName := command.Command()
-    args := command.Args()
+To run:
 
-    cmd := exec.Command(commandName, args...)
-    readBuffer := bytes.Buffer{}
-    cmd.Stdout = &readBuffer
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-    	log.Fatalf("Failed running curl command: %v. %v", err, os.Stderr)
-    }
-    fmt.Printf("Successfully ran: %s. %v", command, os.Stdout)
-}
-
+```bash
+go run examples/execcommand/main.go
 ```
 
-## Install
+## Using within your golang code / Install
 
 ```bash
 $ go get github.com/dkoston/http2curl
